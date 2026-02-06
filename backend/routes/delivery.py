@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from middleware import require_role
 from models import AvailabilityRequest, DeliveryOTPRequest, gen_id, now_iso
+from pydantic import BaseModel
 import logging
 
 logger = logging.getLogger(__name__)
