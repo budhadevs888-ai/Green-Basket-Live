@@ -132,6 +132,11 @@ async def checkout(req: CheckoutRequest, user=Depends(require_role("CUSTOMER")))
 
         if has_all:
             assigned_seller = seller
+            # Remap product_ids to seller's actual product IDs
+            for item in order_items:
+                sp = seller_products_map.get(item["name"])
+                if sp:
+                    item["product_id"] = sp["id"]
             break
 
     order_num = random.randint(1000, 9999)
