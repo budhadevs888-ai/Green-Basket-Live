@@ -15,6 +15,12 @@ export default function SellerOrders() {
 
   useEffect(() => { fetchOrders(); }, []);
 
+  // Real-time polling every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchOrders, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleAccept = async (orderId) => {
     try { await api.post(`/api/seller/orders/${orderId}/accept`); fetchOrders(); } catch (err) { alert(err.response?.data?.detail || 'Failed'); }
   };

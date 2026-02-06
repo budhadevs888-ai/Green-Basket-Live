@@ -1,11 +1,12 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Store, Truck, ShoppingCart, DollarSign, Users, ScrollText, User, Shield } from 'lucide-react';
+import { LayoutDashboard, Store, Truck, ShoppingCart, DollarSign, Users, ScrollText, User, Shield, Package } from 'lucide-react';
 
 const menuItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/sellers', label: 'Sellers', icon: Store },
   { to: '/admin/delivery-partners', label: 'Delivery Partners', icon: Truck },
+  { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { to: '/admin/earnings', label: 'Earnings', icon: DollarSign },
   { to: '/admin/users', label: 'Users', icon: Users },

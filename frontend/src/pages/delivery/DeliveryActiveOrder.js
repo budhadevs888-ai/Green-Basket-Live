@@ -25,6 +25,15 @@ export default function DeliveryActiveOrder() {
     }).catch(() => { setLoading(false); navigate('/delivery/availability'); });
   }, [navigate]);
 
+  // Real-time polling every 5 seconds
+  useEffect(() => {
+    if (!order || order.status === 'DELIVERED') return;
+    const interval = setInterval(() => {
+      api.get('/api/delivery/active-order').then(r => { if (r.data.order) setOrder(r.data.order); }).catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [order?.status]);
+
   const handlePickup = async () => {
     try {
       await api.post(`/api/delivery/orders/${order.id}/pickup`);

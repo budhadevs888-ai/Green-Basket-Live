@@ -13,6 +13,15 @@ export default function OrderTracking() {
 
   useEffect(() => { api.get(`/api/customer/orders/${orderId}`).then(r => { setOrder(r.data.order); setLoading(false); }).catch(() => setLoading(false)); }, [orderId]);
 
+  // Real-time polling every 5 seconds
+  useEffect(() => {
+    if (!orderId || !order || order.status === 'DELIVERED' || order.status === 'CANCELLED') return;
+    const interval = setInterval(() => {
+      api.get(`/api/customer/orders/${orderId}`).then(r => { if (r.data.order) setOrder(r.data.order); }).catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [orderId, order?.status]);
+
   if (loading) return <div className="min-h-screen flex justify-center items-center"><Loader2 className="w-8 h-8 animate-spin text-green-600" /></div>;
   if (!order) return <div className="min-h-screen bg-gray-50 flex flex-col"><div className="bg-white border-b p-4 flex items-center gap-3"><Button variant="ghost" size="sm" onClick={() => navigate('/customer/orders')}><ArrowLeft className="w-5 h-5" /></Button><h1 className="text-xl font-bold">Order Not Found</h1></div></div>;
 
