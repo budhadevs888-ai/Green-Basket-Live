@@ -111,16 +111,16 @@ class GreenBasketAPITester:
         success, _ = self.run_test(
             "Seller Send OTP", "POST", "auth/send-otp", 200,
             data={"phone": "8888888888"},
-            description="Send OTP for new seller registration"
+            description="Send OTP for seller (already registered from previous tests)"
         )
         if not success:
             return False
 
-        # Verify OTP (creates new seller)
+        # Verify OTP (existing seller)
         success, response = self.run_test(
             "Seller Verify OTP", "POST", "auth/verify-otp", 200,
             data={"phone": "8888888888", "otp": "123456", "role": "SELLER"},
-            description="Register new seller and get token"
+            description="Login existing seller and get token"
         )
         if success and 'token' in response:
             self.seller_token = response['token']
