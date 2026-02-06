@@ -5,7 +5,7 @@ import { LayoutDashboard, Store, Truck, ShoppingCart, DollarSign, Users, ScrollT
 const menuItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/sellers', label: 'Sellers', icon: Store },
-  { to: '/admin/delivery-partners', label: 'Delivery', icon: Truck },
+  { to: '/admin/delivery-partners', label: 'Delivery Partners', icon: Truck },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { to: '/admin/earnings', label: 'Earnings', icon: DollarSign },
   { to: '/admin/users', label: 'Users', icon: Users },
