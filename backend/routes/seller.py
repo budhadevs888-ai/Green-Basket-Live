@@ -352,3 +352,54 @@ async def get_profile(user=Depends(require_role("SELLER"))):
 
 
 import os
+
+
+class SellerRegisterRequest(BaseModel):
+    shop_name: str
+    city: str
+    address: str
+    latitude: float
+    longitude: float
+    bank_account: str = ""
+    bank_ifsc: str = ""
+    bank_name: str = ""
+    categories: list = []
+
+
+from pydantic import BaseModel as PydanticBaseModel
+
+
+@router.post("/register")
+async def register_seller(req: SellerRegisterRequest, user=Depends(require_role("SELLER"))):
+    seller_id = user["user_id"]
+    seller = await db.users.find_one({"id": seller_id}, {"_id": 0})
+    if seller and seller.get("shop_name"):
+        return {"success": True, "message": "Already registered", "redirect": "/seller/approval-status"}
+
+    bank_info = f"{req.bank_name} | {req.bank_account} | {req.bank_ifsc}" if req.bank_account else ""
+
+    await db.users.update_one(
+        {"id": seller_id},
+        {"$set": {
+            "shop_name": req.shop_name,
+            "city": req.city,
+            "address": req.address,
+            "latitude": req.latitude,
+            "longitude": req.longitude,
+            "bank_info": bank_info,
+            "categories": req.categories,
+        }}
+    )
+
+    await db.audit_logs.insert_one({
+        "id": gen_id(),
+        "actor_id": seller_id,
+        "actor_role": "SELLER",
+        "action": "SELLER_REGISTERED",
+        "entity": "user",
+        "entity_id": seller_id,
+        "details": f"Seller {req.shop_name} submitted registration",
+        "created_at": now_iso(),
+    })
+
+    return {"success": True, "redirect": "/seller/approval-status"}

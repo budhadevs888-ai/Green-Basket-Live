@@ -152,6 +152,48 @@ async def verify_delivery_otp(order_id: str, req: DeliveryOTPRequest, user=Depen
     }
 
 
+class DeliveryRegisterRequest(BaseModel):
+    city: str
+    address: str
+    latitude: float
+    longitude: float
+    vehicle_type: str = ""
+    vehicle_number: str = ""
+
+
+@router.post("/register")
+async def register_delivery(req: DeliveryRegisterRequest, user=Depends(require_role("DELIVERY"))):
+    partner_id = user["user_id"]
+    partner = await db.users.find_one({"id": partner_id}, {"_id": 0})
+    if partner and partner.get("city"):
+        return {"success": True, "message": "Already registered", "redirect": "/delivery/approval-status"}
+
+    await db.users.update_one(
+        {"id": partner_id},
+        {"$set": {
+            "city": req.city,
+            "address": req.address,
+            "latitude": req.latitude,
+            "longitude": req.longitude,
+            "vehicle_type": req.vehicle_type,
+            "vehicle_number": req.vehicle_number,
+        }}
+    )
+
+    await db.audit_logs.insert_one({
+        "id": gen_id(),
+        "actor_id": partner_id,
+        "actor_role": "DELIVERY",
+        "action": "DELIVERY_PARTNER_REGISTERED",
+        "entity": "user",
+        "entity_id": partner_id,
+        "details": f"Delivery partner submitted registration in {req.city}",
+        "created_at": now_iso(),
+    })
+
+    return {"success": True, "redirect": "/delivery/approval-status"}
+
+
 @router.get("/earnings")
 async def get_earnings(user=Depends(require_role("DELIVERY"))):
     earnings = await db.earnings.find(

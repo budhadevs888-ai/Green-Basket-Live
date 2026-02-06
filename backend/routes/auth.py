@@ -125,6 +125,8 @@ def _get_redirect(user):
         return "/customer/home"
 
     if role == "SELLER":
+        if not user.get("shop_name"):
+            return "/seller/register"
         if approval != "APPROVED":
             return "/seller/approval-status"
         today = now_iso()[:10]
@@ -133,6 +135,8 @@ def _get_redirect(user):
         return "/seller/dashboard"
 
     if role == "DELIVERY":
+        if not user.get("city"):
+            return "/delivery/register"
         if approval != "APPROVED":
             return "/delivery/approval-status"
         return "/delivery/availability"
