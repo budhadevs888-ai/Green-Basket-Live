@@ -8,6 +8,7 @@ import Landing from './pages/Landing';
 
 // Seller
 import SellerLogin from './pages/seller/SellerLogin';
+import SellerRegister from './pages/seller/SellerRegister';
 import ApprovalStatus from './pages/seller/ApprovalStatus';
 import DailyStock from './pages/seller/DailyStock';
 import SellerLayout from './pages/seller/SellerLayout';
@@ -30,6 +31,7 @@ import CustomerProfile from './pages/customer/CustomerProfile';
 
 // Delivery
 import DeliveryLogin from './pages/delivery/DeliveryLogin';
+import DeliveryRegister from './pages/delivery/DeliveryRegister';
 import DeliveryApprovalStatus from './pages/delivery/DeliveryApprovalStatus';
 import DeliveryAvailability from './pages/delivery/DeliveryAvailability';
 import DeliveryActiveOrder from './pages/delivery/DeliveryActiveOrder';
@@ -47,6 +49,7 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminEarnings from './pages/admin/AdminEarnings';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminAuditLogs from './pages/admin/AdminAuditLogs';
+import AdminProducts from './pages/admin/AdminProducts';
 import AdminProfile from './pages/admin/AdminProfile';
 
 function App() {
@@ -58,6 +61,7 @@ function App() {
 
           {/* Seller Routes */}
           <Route path="/seller/login" element={<SellerLogin />} />
+          <Route path="/seller/register" element={<ProtectedRoute requiredRole="SELLER"><SellerRegister /></ProtectedRoute>} />
           <Route path="/seller/approval-status" element={<ProtectedRoute requiredRole="SELLER"><ApprovalStatus /></ProtectedRoute>} />
           <Route path="/seller/daily-stock" element={<ProtectedRoute requiredRole="SELLER"><DailyStock /></ProtectedRoute>} />
           <Route path="/seller" element={<ProtectedRoute requiredRole="SELLER"><SellerLayout /></ProtectedRoute>}>
@@ -82,6 +86,7 @@ function App() {
 
           {/* Delivery Routes */}
           <Route path="/delivery/login" element={<DeliveryLogin />} />
+          <Route path="/delivery/register" element={<ProtectedRoute requiredRole="DELIVERY"><DeliveryRegister /></ProtectedRoute>} />
           <Route path="/delivery/approval-status" element={<ProtectedRoute requiredRole="DELIVERY"><DeliveryApprovalStatus /></ProtectedRoute>} />
           <Route path="/delivery/availability" element={<ProtectedRoute requiredRole="DELIVERY"><DeliveryAvailability /></ProtectedRoute>} />
           <Route path="/delivery/active-order" element={<ProtectedRoute requiredRole="DELIVERY"><DeliveryActiveOrder /></ProtectedRoute>} />
@@ -98,6 +103,7 @@ function App() {
             <Route path="delivery-partners" element={<AdminDeliveryPartners />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="earnings" element={<AdminEarnings />} />
+            <Route path="products" element={<AdminProducts />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="audit-logs" element={<AdminAuditLogs />} />
             <Route path="profile" element={<AdminProfile />} />
