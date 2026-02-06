@@ -1,89 +1,113 @@
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
-from datetime import datetime, timezone
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
+from contextlib import asynccontextmanager
+from models import gen_id, now_iso
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+MONGO_URL = os.environ.get("MONGO_URL")
+DB_NAME = os.environ.get("DB_NAME", "green_basket")
 
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+async def seed_admin(db):
+    existing = await db.users.find_one({"phone": "9999999999", "role": "ADMIN"})
+    if not existing:
+        admin = {
+            "id": gen_id(),
+            "phone": "9999999999",
+            "role": "ADMIN",
+            "status": "ACTIVE",
+            "approval_status": "APPROVED",
+            "city": "Bangalore",
+            "latitude": 12.9716,
+            "longitude": 77.5946,
+            "address": "Admin Office",
+            "house": "",
+            "area": "",
+            "pincode": "",
+            "shop_name": "",
+            "bank_info": "",
+            "categories": [],
+            "daily_stock_confirmed": False,
+            "daily_stock_date": "",
+            "is_available": False,
+            "location_set": True,
+            "created_at": now_iso(),
+        }
+        await db.users.insert_one(admin)
+        logger.info("Admin seeded: phone=9999999999")
+    else:
+        logger.info("Admin already exists")
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    client = AsyncIOMotorClient(MONGO_URL)
+    db = client[DB_NAME]
+    app.state.db = db
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+    # Create indexes
+    await db.users.create_index([("phone", 1), ("role", 1)], unique=True)
+    await db.users.create_index("id", unique=True)
+    await db.products.create_index("id", unique=True)
+    await db.products.create_index("seller_id")
+    await db.orders.create_index("id", unique=True)
+    await db.orders.create_index("customer_id")
+    await db.orders.create_index("seller_id")
+    await db.orders.create_index("delivery_partner_id")
+    await db.earnings.create_index("user_id")
+    await db.audit_logs.create_index("created_at")
+
+    # Seed admin
+    await seed_admin(db)
+
+    # Pass db to route modules
+    from routes.auth import set_db as auth_set_db
+    from routes.seller import set_db as seller_set_db
+    from routes.customer import set_db as customer_set_db
+    from routes.delivery import set_db as delivery_set_db
+    from routes.admin import set_db as admin_set_db
+
+    auth_set_db(db)
+    seller_set_db(db)
+    customer_set_db(db)
+    delivery_set_db(db)
+    admin_set_db(db)
+
+    logger.info("Green Basket backend started")
+    yield
+
+    client.close()
 
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
-
-# Include the router in the main app
-app.include_router(api_router)
+app = FastAPI(title="Green Basket API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Include routers
+from routes.auth import router as auth_router
+from routes.seller import router as seller_router
+from routes.customer import router as customer_router
+from routes.delivery import router as delivery_router
+from routes.admin import router as admin_router
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+app.include_router(auth_router)
+app.include_router(seller_router)
+app.include_router(customer_router)
+app.include_router(delivery_router)
+app.include_router(admin_router)
+
+
+@app.get("/api/health")
+async def health():
+    return {"status": "healthy", "service": "Green Basket API"}
