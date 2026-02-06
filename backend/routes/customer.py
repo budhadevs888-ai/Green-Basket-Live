@@ -94,39 +94,41 @@ async def checkout(req: CheckoutRequest, user=Depends(require_role("CUSTOMER")))
 
     delivery_fee = 0 if total_amount >= 500 else 40
 
-    # Find best seller - has all items in stock, approved, same city
+    # Find best seller - has all items by name+unit in stock, approved, same city
     assigned_seller = None
-    seller_ids = set()
-    for item in order_items:
-        product = await db.products.find_one({"id": item["product_id"]}, {"_id": 0})
-        if product:
-            seller_ids.add(product["seller_id"])
+    today = now_iso()[:10]
 
-    for seller_id in seller_ids:
-        seller = await db.users.find_one({
-            "id": seller_id,
-            "role": "SELLER",
-            "approval_status": "APPROVED",
-            "status": "ACTIVE",
-        }, {"_id": 0})
+    # Get all approved active sellers who confirmed stock today
+    eligible_sellers = await db.users.find({
+        "role": "SELLER",
+        "approval_status": "APPROVED",
+        "status": "ACTIVE",
+        "daily_stock_date": today,
+    }, {"_id": 0}).to_list(1000)
 
-        if not seller:
-            continue
-
-        today = now_iso()[:10]
-        if seller.get("daily_stock_date", "") != today:
-            continue
-
+    for seller in eligible_sellers:
         has_all = True
+        seller_products_map = {}
         for item in order_items:
             prod = await db.products.find_one({
-                "id": item["product_id"],
-                "seller_id": seller_id,
+                "seller_id": seller["id"],
+                "name": item["name"],
+                "unit": item["unit"],
                 "status": "APPROVED",
             }, {"_id": 0})
             if not prod or prod.get("stock", 0) < item["quantity"]:
                 has_all = False
                 break
+            seller_products_map[item["name"]] = prod
+
+        if has_all:
+            assigned_seller = seller
+            # Remap product_ids to seller's actual product IDs
+            for item in order_items:
+                sp = seller_products_map.get(item["name"])
+                if sp:
+                    item["product_id"] = sp["id"]
+            break
 
         if has_all:
             assigned_seller = seller
