@@ -4,6 +4,7 @@ from models import (
     BulkProductRequest, PriceUpdateRequest,
     StockConfirmRequest, StockAdjustRequest, gen_id, now_iso
 )
+from pydantic import BaseModel as PydanticBaseModel
 import logging
 
 logger = logging.getLogger(__name__)
@@ -354,7 +355,7 @@ async def get_profile(user=Depends(require_role("SELLER"))):
 import os
 
 
-class SellerRegisterRequest(BaseModel):
+class SellerRegisterRequest(PydanticBaseModel):
     shop_name: str
     city: str
     address: str
@@ -364,9 +365,6 @@ class SellerRegisterRequest(BaseModel):
     bank_ifsc: str = ""
     bank_name: str = ""
     categories: list = []
-
-
-from pydantic import BaseModel as PydanticBaseModel
 
 
 @router.post("/register")
