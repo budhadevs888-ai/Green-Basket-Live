@@ -316,7 +316,98 @@ class GreenBasketAPITester:
             description="Delivery partner sets availability to true"
         )
 
-    def test_role_based_access_control(self):
+    def test_new_seller_register_endpoint(self):
+        """Test new seller registration endpoint with all fields"""
+        return self.run_test(
+            "Seller Register Endpoint", "POST", "seller/register", 200,
+            data={
+                "shop_name": "Test Green Grocery",
+                "city": "Bangalore",
+                "address": "123 MG Road, Bangalore",
+                "latitude": 12.9716,
+                "longitude": 77.5946,
+                "bank_account": "1234567890",
+                "bank_ifsc": "SBIN0001234",
+                "bank_name": "State Bank of India",
+                "categories": ["Fruits", "Vegetables"]
+            },
+            token=self.seller_token,
+            description="Test seller registration form submission with Google Maps data"
+        )
+
+    def test_new_delivery_register_endpoint(self):
+        """Test new delivery partner registration endpoint"""
+        return self.run_test(
+            "Delivery Register Endpoint", "POST", "delivery/register", 200,
+            data={
+                "city": "Bangalore", 
+                "address": "456 Brigade Road, Bangalore",
+                "latitude": 12.9716,
+                "longitude": 77.5946,
+                "vehicle_type": "Two-Wheeler",
+                "vehicle_number": "KA01AB1234"
+            },
+            token=self.delivery_token,
+            description="Test delivery partner registration form with vehicle details"
+        )
+
+    def test_admin_products_endpoint(self):
+        """Test new admin products management endpoints"""
+        # Get all products
+        success, response = self.run_test(
+            "Admin Get Products", "GET", "admin/products", 200,
+            token=self.admin_token,
+            description="Get all products for admin approval"
+        )
+        if not success:
+            return False
+
+        # Get products by status
+        success, _ = self.run_test(
+            "Admin Get Pending Products", "GET", "admin/products?status=pending", 200,
+            token=self.admin_token,
+            description="Filter products by PENDING status"
+        )
+
+        return success
+
+    def test_product_approval_workflow(self):
+        """Test the complete product approval workflow"""
+        # First add products as seller
+        success, response = self.run_test(
+            "Seller Add Products for Approval", "POST", "seller/products/bulk", 200,
+            data={
+                "products": [
+                    {"name": "Fresh Apples", "unit": "kg", "price": 150.0},
+                    {"name": "Green Bananas", "unit": "dozen", "price": 80.0}
+                ]
+            },
+            token=self.seller_token,
+            description="Seller adds products that need admin approval"
+        )
+        if not success or 'products' not in response:
+            return False
+            
+        new_product_ids = [p['id'] for p in response['products']]
+        print(f"   📦 Added {len(new_product_ids)} products for approval")
+
+        # Admin approves first product
+        success, _ = self.run_test(
+            "Admin Approve Product", "POST", f"admin/products/{new_product_ids[0]}/approve", 200,
+            token=self.admin_token,
+            description="Admin approves the first product"
+        )
+        if not success:
+            return False
+
+        # Admin rejects second product
+        success, _ = self.run_test(
+            "Admin Reject Product", "POST", f"admin/products/{new_product_ids[1]}/reject", 200,
+            token=self.admin_token,
+            description="Admin rejects the second product"
+        )
+
+        return success
         """Test that roles can't access each other's endpoints"""
         print(f"\n🔒 Testing Role-Based Access Control...")
         
