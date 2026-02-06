@@ -425,6 +425,24 @@ class GreenBasketAPITester:
             description="Customer tries to access seller dashboard (should fail)"
         )
         
+    def test_role_based_access_control(self):
+        """Test that roles can't access each other's endpoints"""
+        print(f"\n🔒 Testing Role-Based Access Control...")
+        
+        # Seller tries to access admin endpoint
+        success1, _ = self.run_test(
+            "RBAC - Seller→Admin (Should Fail)", "GET", "admin/dashboard", 403,
+            token=self.seller_token,
+            description="Seller tries to access admin dashboard (should fail)"
+        )
+        
+        # Customer tries to access seller endpoint
+        success2, _ = self.run_test(
+            "RBAC - Customer→Seller (Should Fail)", "GET", "seller/dashboard", 403,
+            token=self.customer_token,
+            description="Customer tries to access seller dashboard (should fail)"
+        )
+        
         return success1 and success2
 
     def print_summary(self):
